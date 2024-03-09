@@ -1,0 +1,96 @@
+---
+title: "Assignment3"
+output: pdf_document
+date: "2024-03-08"
+Author: "Asif Sayyad"
+---
+
+```{r}
+Bank=read.csv("C:/Users/chand/Downloads/UniversalBank.csv")
+summary(Bank)
+#converting the variables into factor
+Bank$Personal.Loan<-factor(Bank$Personal.Loan)
+Bank$Online<-factor(Bank$Online)
+Bank$CreditCard<-factor(Bank$CreditCard)
+```
+
+
+```{r}
+#Question1 : Create a pivot table for the training data with Online as a column variable, CC as a rowvariable, and Loan as a secondary row variable.
+
+#1.divide the data into 60 and 40
+#install.packages("caret")
+set.seed(123)
+library(caret)
+library(class)
+train_index<-createDataPartition(Bank$Personal.Loan,p=0.6,list=FALSE)
+train_data<-Bank[train_index,]
+test_data<-Bank[-train_index,]
+#table(CC=train_data$CreditCard, online=train_data$Online, loan=train_data$Personal.Loan)
+table <- xtabs(~ CreditCard + Online + Personal.Loan , data = train_data)
+ftable(table)
+```
+
+
+```{r}
+#Question2: Consider the task of classifying a customer who owns a bank credit card and is actively using online banking services
+prob<- 51/(51+467)
+prob
+```
+
+```{r}
+#Question3:Create two separate pivot tables for the training data. One will have Loan (rows) as a function of Online (columns) and the other will have Loan (rows) as a function of CC
+
+#table only with loan info as row
+table(Personal.Loan = train_data$Personal.Loan)
+#pivot table with column online data
+table(Personal.Loan = train_data$Personal.Loan, Online = train_data$Online)
+#pivot table with column creditcard info
+table(Personal.Loan = train_data$Personal.Loan, CC =train_data$CreditCard)
+```
+
+```{r}
+#Question4
+#i. P(CC = 1 | Loan = 1
+prob1<- 84/(84+204)
+prob1
+
+#ii.P(Online = 1 | Loan = 1)
+prob2<-176/(176+112)
+prob2
+
+#iii. P(Loan = 1) (the proportion of loan acceptors)
+prob3<-288/(288+2712)
+prob3
+
+#iv P(CC = 1 | Loan = 0)
+prob4<-777/(777+1935)
+prob4
+
+#v P(Online = 1 | Loan = 0)
+prob5<-1611/(1611+1101)
+prob5
+
+#vi P(Loan = 0)
+prob6<-2712/(2712+288)
+prob6
+```
+
+```{r}
+#Question 5:Use the quantities computed above to compute the naive Bayes probability P(Loan = 1 | CC= 1, Online = 1)
+
+overallprob<-(prob1*prob2*prob3)/((prob1*prob2*prob3)+(prob4*prob5*prob6))
+overallprob
+```
+
+QUestion6: Compare this value with the one obtained from the pivot table in (B). Which is a moreaccurate estimate
+
+ANS:Value we got from question 2 was 0.09323583 and in the question 5 0.1000861 have some differences in it. The difference between the two methods is, exact method need the same independent variables classification to predict, whereas the naive bayes method need not to have independent variables. The Value from the question2 is more accurate because the values are the exact values from the pivot table.
+
+```{r}
+#Question7:Run naive Bayes on the data. Examine the model output on training data, and find the entrythat corresponds to P(Loan = 1 | CC = 1, Online = 1)
+library(e1071)
+model <- naiveBayes(Personal.Loan~ Online + CreditCard, data = train_data)
+predict(model,data.frame(Online=1, CreditCard= 1) ,type = 'raw')
+```
+The values from the both cases are similar. value from question 7 is 0.09206369 and the value from question5 is 0.1000861. The difference is due to the rounding.
