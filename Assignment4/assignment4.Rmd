@@ -1,0 +1,86 @@
+---
+title: "Assignment4"
+author: "Asif Sayyad"
+date: "2024-03-14"
+output: pdf_document
+---
+
+```{r}
+#install.packages("tidyverse")
+#install.packages("factoextra")
+library(tidyverse)
+library(factoextra)
+pharma=read.csv("C:/Users/chand/Downloads/Pharmaceuticals.csv")
+head(pharma)
+#removing all the missing values from the data
+pharma <- na.omit(pharma)
+pharma
+#numerical values (1-9) to cluster
+row.names(pharma)<-pharma[,1]
+pharma_data<-pharma[,3:11] # these columns number are taken from the file
+head(pharma_data)
+#normalising the data
+pharma_data<-scale(pharma_data)
+head(pharma_data)
+#using silhouette method for determing the cluster
+fviz_nbclust(pharma_data,kmeans,method="silhouette")
+#from the plot, we can see there is sharp edge at k=5. so, considering k=5
+set.seed(11034)
+k5<-kmeans(pharma_data,centers=5,nstart=25)
+k5$centres
+fviz_cluster(k5,data=pharma_data)
+#finding distance
+distance<-dist(pharma_data,method ="euclidean")
+fviz_dist(distance)
+fitting<-kmeans(pharma_data,5)
+#mean value for each cluster
+aggregate(pharma_data,by=list(fitting$cluster),FUN=mean)
+#framing thr dataframe using the cluster values
+Pharma_df<-data.frame(pharma_data,fitting$cluster)
+Pharma_df
+#to view the cluster plot
+#install.packages("cluster")
+library(cluster)
+clusplot(pharma_data,fitting$cluster,color=TRUE,shade=FALSE,labels=2,lines=0)
+```
+
+2.Interpret the clusters with respect to the numerical variables used in forming the clusters.
+
+Ans:
+by seeing all the mean variables of numerical variables for each clusters.
+
+cluster1: it contains AGN,PHA,BAY. These have the highest PE_Ratio.
+
+cluster2: it contains JNJ,MRK,GSK,PFE. they have good leverage point and market_cap value.
+
+cluster3: it contains AHM,AVE,WPI. lowest beta value
+
+cluster4: it contains IVX,MRX,ELN,CHTT. they have high revenve growth and also have good leverage points.
+
+cluster5: lowest revenve growth.
+
+3. Is there a pattern in the clusters with respect to the numerical variables (10 to 12)?
+
+Ans: cluster1: highest PE_ratio. as per the media recommendations.
+
+cluster2: have good leverage point and market_cap value. These are moderately recommended.
+
+cluster3: here media recommendations are highly possible because lowest beta value.
+
+cluster4: these are moderately recommended because of good leverage points.
+
+cluster5:They have high assest turnover and net profit.
+
+4.Provide an appropriate name for each cluster using any or all of the variables in the dataset.
+
+Ans: cluster1: hold cluster
+
+cluster2: hold cluster
+
+cluster3: buy or sell cluster
+
+cluster4: buy cluster
+
+cluster5: hold cluster.
+
+ 
