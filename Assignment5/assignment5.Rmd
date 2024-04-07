@@ -1,0 +1,175 @@
+---
+title: "Assignment5"
+author: "Asif Sayyad"
+date: "2024-04-05"
+output: pdf_document
+---
+
+```{r}
+#install.packages("tidyverse")
+#install.packages("factoextra")
+library(tidyverse)
+library(factoextra)
+cereals=read.csv("C:/Users/chand/Downloads/Cereals.csv")
+head(cereals)
+nrow(cereals)
+cereals[ , c(4:16)] <- scale(cereals[ , c(4:16)])
+cereals<-na.omit(cereals)
+nrow(cereals)
+```
+they are only three NA values. after removing those missing values they are only 74 rows 
+
+```{r}
+cereal_df <- dist(cereals, method ="euclidean")
+# Perform hierarchical clustering via the single linkage method
+#install.packages("cluster")
+library(cluster)
+single_df <-agnes(cereal_df, method = "single")
+plot(single_df, 
+     main = "Single Linkage Method",
+     xlab = "Cereal",
+     ylab = "Height",
+     cex.axis = 1,
+     cex = 0.55,
+ hang = -1)
+```
+```{r}
+cereal_df <- dist(cereals, method ="euclidean")
+# Perform hierarchical clustering via the complete linkage method
+#install.packages("cluster")
+library(cluster)
+complete_df <-agnes(cereal_df, method = "complete")
+plot(complete_df, 
+     main = "complete Linkage Method",
+     xlab = "Cereal",
+     cex.axis = 1,
+     cex = 0.55,
+ hang = -1)
+```
+```{r}
+cereal_df <- dist(cereals, method ="euclidean")
+# Perform hierarchical clustering via the average linkage method
+#install.packages("cluster")
+library(cluster)
+average_df <-agnes(cereal_df, method = "average")
+plot(average_df, 
+     main = "average Linkage Method",
+     xlab = "Cereal",
+     cex.axis = 1,
+     cex = 0.55,
+ hang = -1)
+```
+```{r}
+cereal_df <- dist(cereals, method ="euclidean")
+# Perform hierarchical clustering via the ward linkage method
+#install.packages("cluster")
+library(cluster)
+ward_df <-agnes(cereal_df, method = "ward")
+plot(ward_df, 
+     main = "ward Linkage Method",
+     xlab = "Cereal",
+     cex.axis = 1,
+     cex = 0.55,
+ hang = -1)
+```
+
+In order to choose the best clustering we use the agglomerative coefficient. That can be acheived by using agnes method from cluster library. 
+single linkage method has 0.73
+complete linkage mehod has 0.92
+average linkage method has 0.88
+ward linkage method has 0.96
+The coefficent which is closer to 1.0 is best cluster. so, ward linkage method is choosen for best cluster.
+
+#to find how many clusters we use the elbow and silhouette methods
+
+```{r}
+library(factoextra)
+fviz_nbclust(cereals[ , c(4:16)],hcut,method="silhouette",k.max=25)
+fviz_nbclust(cereals[ , c(4:16)],hcut,method="wss",k.max=25)
+```
+Based on the plot of two methods, appropriate number of cluster are 12.
+
+```{r}
+#divide the ward tree with 12 clusters
+ward_clusters <- cutree(ward_df, k = 12)
+cereals_df <- cbind(cluster = ward_clusters, 
+cereals)
+#partition the data
+set.seed(124)
+
+# Split the data into 70% partition A and 30% partition B
+#install.packages("caret")
+library(caret)
+Index <- createDataPartition(cereals$protein, p=0.3, list =F)
+cereals_PartitionB <- cereals[Index, ]
+cereal_PartitionA <- cereals[-Index,] 
+
+#clustering with partition data. for this we are using 12 clusters and the ward linkage method to find the stability of clusters
+cereal_df <- dist(cereal_PartitionA, method ="euclidean")
+# Perform hierarchical clustering via the ward linkage method
+#install.packages("cluster")
+ward_df1 <-agnes(cereal_df, method = "ward")
+plot(ward_df1, 
+     main = "ward Linkage Method",
+     xlab = "Cereal",
+     cex.axis = 1,
+     cex = 0.55,
+ hang = -1)
+```
+```{r}
+#continue the process again to find the centriod in partition B
+ward_clusters1 <- cutree(ward_df1, k = 12)
+cereals_A <- cbind(cluster = ward_clusters1, 
+cereal_PartitionA)
+#find the centroids in partition B
+ward_Centroids_A <- aggregate(cereals_A[ , 5:17], 
+list(cereals_A$cluster), mean)
+ward_Centroids_A <- data.frame(Cluster = ward_Centroids_A[ , 1], Centroid =
+rowMeans(ward_Centroids_A[ , -c(1:4)]))
+ward_Centroids_A <- ward_Centroids_A$Centroid
+# Calculate Centers of Partition B 
+cereal_B_centers <-
+data.frame(cereals_PartitionB[, 1:3], Center =
+rowMeans(cereals_PartitionB[ , 4:16]))
+#find distance between the center of partition A and partition B
+centers <- dist(ward_Centroids_A, 
+cereal_B_centers$Center, method = "euclidean")
+cereal_B <- cbind(cluster =
+c(4,8,7,3,5,6,7,11,11,10,8,5,10,1,10,1,4,12,12,7,7,1,4,9), 
+cereals_PartitionB)
+
+# Combine partitions A and B
+cereal_1 <- rbind(cereals_A, cereal_B)
+cereals_df <-cereals_df[order(cereals_df$name), ]
+cereal_1 <-cereal_1[order(cereal_1$name), ]
+#to see the stability of the clusters
+sum(cereals_df$cluster == cereal_1$cluster)
+```
+
+From the above results, we can conclude that the clusters are not stable. to visualise thev clusters assignment and their differneces use ggplot
+```{r}
+ggplot(data = cereals_df, aes(cereals_df$cluster)) +
+ geom_bar(fill = "red") +
+ labs(title="original data cluster assignments") +
+ labs(x="Cluster Assignment", y="Count") +
+ guides(fill=FALSE) +
+ scale_x_continuous(breaks=c(1:12)) +
+ scale_y_continuous(breaks=c(0,10,20), limits = c(0,25))
+
+ggplot(data = cereal_1, aes(cereal_1$cluster)) +
+ geom_bar(fill = "blue") +
+ labs(title="partitioned data cluster assignments") +
+ labs(x="Cluster Assignment", y="Count") +
+ guides(fill=FALSE) +
+ scale_x_continuous(breaks=c(1:12)) +
+ scale_y_continuous(breaks=c(0,10,20), limits = c(0,25))
+```
+It is evident that Cluster 3 drastically reduces when partitioned data are used. Many of the other clusters subsequently expanded in size. The graph shows that when the data is divided, the clusters seem to be distributed more evenly throughout the 12 clusters.
+
+
+Assignment D:
+This is not the situation where normalizing the data would be suitable. The reason for this is that the specific cereal sample under investigation determines how to scale or normalize nutrition data related to cereal. Consequently, cereals with an exceptionally high sugar content but low levels of fiber, iron, and other nutrients may be the only ones in the data set. Estimating the cereal's nutritional value for a child is impossible when the data inside the sample set is scaled or normalized. A child may receive practically all of the iron they require from cereal with an iron score of 0.999, but this cereal may actually be the best of the worst in the sample set, offering little to no iron. This is what an untrained observer may think. Because of this, preprocessing the data as a ratio to a child's daily recommended intake of calories, fiber, carbs, and other nutrients would be a better approach. This would prevent a few larger factors from overriding distance computations and enable analysts to make more informed conclusions about clusters when reviewing them. An analyst analyzing the clusters might determine, from the cluster averages, the proportion of a student's daily nutritional needs that would come from XX cereal. The personnel would be able to choose "healthy" cereal clusters with greater knowledge as a result.
+
+
+
+
